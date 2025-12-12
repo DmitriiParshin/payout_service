@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-payout_db}
+      POSTGRES_USER: ${DB_USER:-payout_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-payout_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-payout_user} -d ${DB_NAME:-payout_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  app:
+    build: .
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=${DB_USER:-payout_user}
+      - REDIS_HOST=redis
+
+  celery:
+    build: .
+    command: celery -A app worker --loglevel=info -E
+    volumes:
+      - .:/app
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=${DB_USER:-payout_user}
+      - REDIS_HOST=redis
+
+volumes:
+  postgres_data:
