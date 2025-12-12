@@ -1,13 +1,15 @@
-import time
-import random
 import logging
-from typing import Dict, Any
+import random
+import time
+
+from typing import Any, Dict
 
 from celery import shared_task
 from celery.exceptions import MaxRetriesExceededError
 from django.db import transaction
 
 from payouts.models import Payout
+
 
 logger = logging.getLogger(__name__)
 

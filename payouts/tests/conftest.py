@@ -1,6 +1,6 @@
-from rest_framework.test import APIClient
-
 import pytest
+
+from rest_framework.test import APIClient
 
 from payouts.models import Currency, RecipientDetails
 
@@ -26,5 +26,5 @@ def recipient(db):
         inn="7707083893",
         kpp="770701001",
         bik="044525225",
-        corr_account="30101810400000000225"
+        corr_account="30101810400000000225",
     )

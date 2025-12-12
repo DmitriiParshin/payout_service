@@ -10,7 +10,7 @@ def test_payout_status_validation(api, currency, recipient):
         amount=Decimal("50"),
         currency=currency,
         recipient_details=recipient,
-        status=Payout.Status.COMPLETED
+        status=Payout.Status.COMPLETED,
     )
 
     url = reverse("payout-detail", args=[payout.id])
@@ -18,4 +18,3 @@ def test_payout_status_validation(api, currency, recipient):
 
     assert response.status_code == 400
     assert "Нельзя перейти" in str(response.data)
-    

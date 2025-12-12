@@ -1,13 +1,14 @@
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from payouts.views import PayoutViewSet, CurrencyViewSet, RecipientDetailsViewSet
+from payouts.views import CurrencyViewSet, PayoutViewSet, RecipientDetailsViewSet
+
 
 router = DefaultRouter()
-router.register(r'payouts', PayoutViewSet, basename='payout')
-router.register(r'currencies', CurrencyViewSet, basename='currency')
-router.register(r'recipients', RecipientDetailsViewSet, basename='recipient')
+router.register(r"payouts", PayoutViewSet, basename="payout")
+router.register(r"currencies", CurrencyViewSet, basename="currency")
+router.register(r"recipients", RecipientDetailsViewSet, basename="recipient")
 
 urlpatterns = [
-    path('api/', include(router.urls)),
+    path("api/", include(router.urls)),
 ]

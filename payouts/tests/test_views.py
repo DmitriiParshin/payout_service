@@ -14,7 +14,7 @@ def test_create_payout(api, currency, recipient, mocker):
         "amount": "99.99",
         "currency": str(currency.id),
         "recipient_details": str(recipient.id),
-        "description": "Test payout"
+        "description": "Test payout",
     }
 
     response = api.post(url, payload, format="json")
@@ -25,9 +25,7 @@ def test_create_payout(api, currency, recipient, mocker):
 
 def test_partial_update_allowed_fields(api, currency, recipient):
     payout = Payout.objects.create(
-        amount=Decimal("50"),
-        currency=currency,
-        recipient_details=recipient
+        amount=Decimal("50"), currency=currency, recipient_details=recipient
     )
 
     url = reverse("payout-detail", args=[payout.id])
@@ -39,9 +37,7 @@ def test_partial_update_allowed_fields(api, currency, recipient):
 
 def test_partial_update_disallowed_fields(api, currency, recipient):
     payout = Payout.objects.create(
-        amount=Decimal("50"),
-        currency=currency,
-        recipient_details=recipient
+        amount=Decimal("50"), currency=currency, recipient_details=recipient
     )
 
     url = reverse("payout-detail", args=[payout.id])
@@ -53,9 +49,7 @@ def test_partial_update_disallowed_fields(api, currency, recipient):
 
 def test_delete_returns_object(api, currency, recipient):
     payout = Payout.objects.create(
-        amount=Decimal("50"),
-        currency=currency,
-        recipient_details=recipient
+        amount=Decimal("50"), currency=currency, recipient_details=recipient
     )
 
     url = reverse("payout-detail", args=[payout.id])
@@ -64,4 +58,3 @@ def test_delete_returns_object(api, currency, recipient):
     assert response.status_code == 200
     assert response.data["id"] == str(payout.id)
     assert not Payout.objects.filter(id=payout.id).exists()
-    
