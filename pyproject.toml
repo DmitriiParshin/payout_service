@@ -11,7 +11,6 @@ dependencies = [
     "redis==7.1.0",
     "psycopg2-binary==2.9.11",
     "django-cors-headers==4.9.0",
-    "django-celery-results==2.6.0",
     "drf-spectacular==0.29.0",
     "gunicorn==23.0.0",
 ]
