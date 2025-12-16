@@ -62,7 +62,7 @@ def process_payout_logic(payout_id: str) -> Dict[str, Any]:
 
 
 @shared_task(bind=True, max_retries=3)
-def process_payout_task(self, payout_id):
+def process_payout_task(self, payout_id: str) -> None | dict[str, Any] | dict[str, str]:
     """Celery задача-обертка для process_payout_logic."""
     try:
         return process_payout_logic(payout_id)

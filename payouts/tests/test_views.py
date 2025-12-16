@@ -96,12 +96,12 @@ def test_create_payout_invalid_recipient(api):
 
 @pytest.mark.django_db
 def test_create_payout_missing_required_fields(api):
-    """Тест: ошибка при отсутствии обязательных полей."""
+    """Тест: ошибка при отсутствии обязательного поля - amount."""
     url = reverse("payout-list")
-    payload = {"amount": "100.00"}  # не хватает полей
+    payload = {}
 
     response = api.post(url, payload, format="json")
 
     assert response.status_code == 400
     assert "recipient_details" in response.data
-    assert "currency" in response.data
+    assert "amount" in response.data

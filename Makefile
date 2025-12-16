@@ -6,6 +6,7 @@ help:
 	@echo "  make up-dev      - Запустить dev окружение"
 	@echo "  make down        - Остановить все сервисы"
 	@echo "  make migrate     - Применить миграции"
+	@echo "  make static      - Собрать статику"
 	@echo "  make create-su   - Создать суперпользователя"
 	@echo "  make test        - Запустить тесты"
 	@echo "  make test-cov    - Запустить тесты с покрытием"
@@ -28,6 +29,9 @@ down-dev:
 
 migrate:
 	docker compose exec web python manage.py migrate
+
+static:
+	docker compose exec web python manage.py collectstatic --no-input
 
 create-su:
 	docker compose exec web python manage.py create_superuser
