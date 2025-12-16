@@ -1,18 +1,5 @@
 from django.db import migrations
 
-CURRENCIES = [
-    {'code': 'USD', 'name': 'Доллар США'},
-    {'code': 'EUR', 'name': 'Евро'},
-    {'code': 'GBP', 'name': 'Фунт стерлингов'},
-    {'code': 'JPY', 'name': 'Японская иена'},
-    {'code': 'CNY', 'name': 'Китайский юань'},
-    {'code': 'CHF', 'name': 'Швейцарский франк'},
-    {'code': 'CAD', 'name': 'Канадский доллар'},
-    {'code': 'AUD', 'name': 'Австралийский доллар'},
-    {'code': 'NZD', 'name': 'Новозеландский доллар'},
-    {'code': 'RUB', 'name': 'Российский рубль'},
-]
-
 RECIPIENTS = [
     {
         'full_name': 'ООО "ТехноСфера"',
@@ -40,19 +27,26 @@ RECIPIENTS = [
         'kpp': '770301003',
         'bik': '044525187',
         'corr_account': '30101810000000000187'
+    },
+    {
+        'full_name': 'ООО "МедиаЛайн"',
+        'bank_name': 'Альфа-Банк',
+        'account_number': '40817810600000000004',
+        'inn': '7704000004',
+        'kpp': '770401004',
+        'bik': '044525593',
+        'corr_account': '30101810400000000593'
+    },
+    {
+        'full_name': 'ИП Сидорова А.В.',
+        'bank_name': 'Росбанк',
+        'account_number': '40817810700000000005',
+        'inn': '7705000005',
+        'kpp': '770501005',
+        'bik': '044526123',
+        'corr_account': '30101810500000000123'
     }
 ]
-
-
-def add_currencies(apps, schema_editor):
-    Currency = apps.get_model('payouts', 'Currency')
-    for data in CURRENCIES:
-        Currency.objects.get_or_create(**data)
-
-
-def remove_currencies(apps, schema_editor):
-    Currency = apps.get_model('payouts', 'Currency')
-    Currency.objects.filter(code__in=[c['code'] for c in CURRENCIES]).delete()
 
 
 def add_recipient_details(apps, schema_editor):
@@ -72,6 +66,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(add_currencies, remove_currencies),
         migrations.RunPython(add_recipient_details, remove_recipient_details),
     ]

@@ -10,7 +10,6 @@ dependencies = [
     "celery==5.6.0",
     "redis==7.1.0",
     "psycopg2-binary==2.9.11",
-    "python-dotenv==1.2.1",
     "django-cors-headers==4.9.0",
     "django-celery-results==2.6.0",
 ]
@@ -32,6 +31,11 @@ testpaths = ["payouts/tests"]
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
 addopts = ["-v", "--tb=short"]
 DJANGO_SETTINGS_MODULE = "app.settings"
+markers = [
+    "postgres: тесты, требующие PostgreSQL",
+    "integration: интеграционные тесты",
+    "slow: медленные тесты",
+]
 
 [tool.coverage.run]
 source = ["payouts"]

@@ -1,8 +1,13 @@
-from django.db import IntegrityError
 from rest_framework import serializers
 
-from payouts.models import Currency, Payout, RecipientDetails
-from payouts.validators import validate_bank_account, validate_bik, validate_inn, validate_kpp
+from payouts.models import Payout, RecipientDetails
+from payouts.validators import (
+    validate_bank_account,
+    validate_bik,
+    validate_corr_account,
+    validate_inn,
+    validate_kpp,
+)
 
 
 class RecipientDetailsSerializer(serializers.ModelSerializer):
@@ -27,50 +32,22 @@ class RecipientDetailsSerializer(serializers.ModelSerializer):
         "inn": {"validators": [validate_inn]},
         "kpp": {"validators": [validate_kpp]},
         "bik": {"validators": [validate_bik]},
+        "corr_account": {"validators": [validate_corr_account]},
     }
 
     def create(self, validated_data) -> RecipientDetails:
-        try:
-            recipient, created = RecipientDetails.objects.get_or_create(
-                inn=validated_data["inn"],
-                account_number=validated_data["account_number"],
-                defaults=validated_data,
-            )
-        except IntegrityError:
-            recipient = RecipientDetails.objects.get(
-                inn=validated_data["inn"], account_number=validated_data["account_number"]
-            )
-        return recipient
+        if RecipientDetails.objects.filter(inn=validated_data["inn"]).exists():
+            raise serializers.ValidationError({"inn": "Получатель с таким ИНН уже существует."})
+
+        return super().create(validated_data)
 
     def update(self, instance: RecipientDetails, validated_data) -> RecipientDetails:
-        inn = validated_data.get("inn", instance.inn)
-        account_number = validated_data.get("account_number", instance.account_number)
+        new_inn = validated_data.get("inn", instance.inn)
 
-        if (inn != instance.inn or account_number != instance.account_number) and (
-            RecipientDetails.objects.filter(inn=inn, account_number=account_number)
-            .exclude(id=instance.id)
-            .exists()
-        ):
-            raise serializers.ValidationError(
-                {"inn": "Реквизиты с таким ИНН и номером счёта уже существуют."}
-            )
+        if new_inn != instance.inn and RecipientDetails.objects.filter(inn=new_inn).exists():
+            raise serializers.ValidationError({"inn": "Получатель с таким ИНН уже существует."})
 
         return super().update(instance, validated_data)
-
-
-class CurrencySerializer(serializers.ModelSerializer):
-    """Сериализатор для валюты"""
-
-    class Meta:
-        model = Currency
-        fields = ["id", "code", "name"]
-        read_only_fields = ["id"]
-
-    def create(self, validated_data):
-        currency, created = Currency.objects.get_or_create(
-            code=validated_data["code"], defaults=validated_data
-        )
-        return currency
 
 
 class PayoutSerializer(serializers.ModelSerializer):
@@ -90,6 +67,12 @@ class PayoutSerializer(serializers.ModelSerializer):
             "error_message",
         ]
         read_only_fields = ["id", "created_at", "updated_at", "error_message"]
+
+    def validate(self, data):
+        # Устанавливаем статус PENDING по умолчанию при создании
+        if self.instance is None:
+            data["status"] = Payout.Status.PENDING
+        return data
 
     def validate_status(self, value):
         # Разрешаем только: pending -> processing -> completed/failed/cancelled
@@ -121,10 +104,5 @@ class PayoutSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance: Payout):
         data = super().to_representation(instance)
-        data["currency"] = {
-            "id": str(instance.currency.id),
-            "code": instance.currency.code,
-            "name": instance.currency.name,
-        }
         data["recipient_details"] = RecipientDetailsSerializer(instance.recipient_details).data
         return data

@@ -87,7 +87,7 @@ def validate_payout(payout: Payout) -> bool:
         if payout.amount <= 0:
             return False
 
-        if not payout.currency or not payout.recipient_details:
+        if not payout.recipient_details:
             return False
 
         details = payout.recipient_details
@@ -98,6 +98,7 @@ def validate_payout(payout: Payout) -> bool:
             details.account_number,
             details.inn,
             details.bik,
+            details.corr_account,
         ]
 
         return all(required_fields)

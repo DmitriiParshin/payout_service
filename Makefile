@@ -1,4 +1,4 @@
-.PHONY: help up up-dev down migrate test test-cov lint format fix fix-all
+.PHONY: help up up-dev down migrate create-superuser test test-cov lint format fix fix-all
 
 help:
 	@echo "Доступные команды:"
@@ -6,6 +6,7 @@ help:
 	@echo "  make up-dev      - Запустить dev окружение"
 	@echo "  make down        - Остановить все сервисы"
 	@echo "  make migrate     - Применить миграции"
+	@echo "  make create-su   - Создать суперпользователя"
 	@echo "  make test        - Запустить тесты"
 	@echo "  make test-cov    - Запустить тесты с покрытием"
 	@echo "  make lint        - Проверить код"
@@ -16,32 +17,35 @@ help:
 up:
 	docker compose up -d --build
 
+down:
+	docker compose down -v
+
 up-dev:
 	docker compose -f docker-compose.dev.yml up -d --build
 
-down:
-	docker compose down
+down-dev:
+	docker compose -f docker-compose.dev.yml down -v
 
 migrate:
 	docker compose exec web python manage.py migrate
 
+create-su:
+	docker compose exec web python manage.py create_superuser
+
 test:
-	docker compose -f docker-compose.dev.yml exec web pytest -v
+	docker compose -f docker-compose.dev.yml exec dev pytest -v
 
 test-cov:
-	docker compose exec web pytest --cov=payouts --cov-report=term-missing --cov-report=html
+	docker compose exec dev pytest --cov=payouts --cov-report=term-missing --cov-report=html
 
 lint:
-	docker compose -f docker-compose.dev.yml exec web ruff check .
+	docker compose -f docker-compose.dev.yml exec dev ruff check .
 
-# Форматирование
 format:
-	docker compose -f docker-compose.dev.yml exec web ruff format .
+	docker compose -f docker-compose.dev.yml exec dev ruff format .
 
-# Автоматическое исправление ошибок
 fix:
-	docker compose -f docker-compose.dev.yml exec web ruff check --fix .
+	docker compose -f docker-compose.dev.yml exec dev ruff check --fix .
 
-# Исправление всех ошибок (включая unsafe)
 fix-all:
-	docker compose -f docker-compose.dev.yml exec web ruff check --fix --unsafe-fixes .
+	docker compose -f docker-compose.dev.yml exec dev ruff check --fix --unsafe-fixes .

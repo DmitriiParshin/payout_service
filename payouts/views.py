@@ -4,17 +4,9 @@ from rest_framework import status, viewsets
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from payouts.models import Currency, Payout, RecipientDetails
-from payouts.serializers import CurrencySerializer, PayoutSerializer, RecipientDetailsSerializer
+from payouts.models import Payout, RecipientDetails
+from payouts.serializers import PayoutSerializer, RecipientDetailsSerializer
 from payouts.tasks import process_payout_task
-
-
-class CurrencyViewSet(viewsets.ModelViewSet):
-    """ViewSet для управления валютами"""
-
-    queryset = Currency.objects.all()
-    serializer_class = CurrencySerializer
-    lookup_field = "id"
 
 
 class RecipientDetailsViewSet(viewsets.ModelViewSet):
@@ -28,7 +20,7 @@ class RecipientDetailsViewSet(viewsets.ModelViewSet):
 class PayoutViewSet(viewsets.ModelViewSet):
     """ViewSet для управления заявками на выплату"""
 
-    queryset = Payout.objects.select_related("currency", "recipient_details").all()
+    queryset = Payout.objects.select_related("recipient_details").all()
     serializer_class = PayoutSerializer
     lookup_field = "id"
 
