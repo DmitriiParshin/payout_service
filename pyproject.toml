@@ -12,6 +12,7 @@ dependencies = [
     "psycopg2-binary==2.9.11",
     "django-cors-headers==4.9.0",
     "django-celery-results==2.6.0",
+    "drf-spectacular==0.29.0",
 ]
 
 [project.optional-dependencies]

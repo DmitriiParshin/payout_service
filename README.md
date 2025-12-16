@@ -63,6 +63,12 @@ make create-su
 make down
 ```
 
+## Документация OpenAPI
+
+**GET /api/docs/**
+
+![img.png](images/img.png)
+
 ## API Эндпоинты (примеры запросов)
 
 **GET /api/recipients/**
@@ -161,26 +167,4 @@ make down
     "error_message": ""
 }
 ```
-
-## Описание валют:
-```
-USD = "USD", "Доллар США"
-EUR = "EUR", "Евро"
-GBP = "GBP", "Фунт стерлингов"
-JPY = "JPY", "Японская иена"
-CNY = "CNY", "Китайский юань"
-CHF = "CHF", "Швейцарский франк"
-CAD = "CAD", "Канадский доллар"
-AUD = "AUD", "Австралийский доллар"
-NZD = "NZD", "Новозеландский доллар"
-RUB = "RUB", "Российский рубль"
-```
-
-## Описание статусов:
-```
-PENDING = "pending", "Ожидает обработки"
-PROCESSING = "processing", "В обработке"
-COMPLETED = "completed", "Выполнена"
-FAILED = "failed", "Ошибка"
-CANCELLED = "cancelled", "Отменена"
-```
+![img_1.png](images/img_1.png)
