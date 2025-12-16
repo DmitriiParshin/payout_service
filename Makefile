@@ -1,4 +1,4 @@
-.PHONY: help up up-dev down migrate create-superuser test test-cov lint format fix fix-all
+.PHONY: help up up-dev down migrate create-su test test-cov lint format fix fix-all
 
 help:
 	@echo "Доступные команды:"
