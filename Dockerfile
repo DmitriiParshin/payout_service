@@ -26,9 +26,9 @@ COPY pyproject.toml uv.lock ./
 
 # Устанавливаем зависимости в систему
 RUN if [ "$INSTALL_DEV" = "true" ]; then \
-      uv pip install --system -e '.[dev]'; \
+      uv sync --extra dev; \
     else \
-      uv pip install --system .; \
+      uv sync; \
     fi
 
 # Копируем код
