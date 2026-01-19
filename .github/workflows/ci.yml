@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [ 'main', 'master' ]
+  pull_request:
+    branches: [ 'main', 'master' ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.12, 3.13, 3.14]
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_payout_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d test_payout_db"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DJANGO_SETTINGS_MODULE: app.settings_tests
+      DB_NAME: test_payout_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: "Install system deps"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpq-dev gcc curl
+
+      - name: "Wait for Postgres"
+        run: |
+          for i in {1..30}; do
+            pg_isready -h 127.0.0.1 -p 5432 -U postgres && break
+            sleep 1
+          done
+
+      - name: "Cache pip downloads"
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+            ${{ runner.os }}-pip-
+
+      - name: "Install uv (using project installer like in Dockerfile)"
+        run: |
+          curl -LsSf https://github.com/astral-sh/uv/releases/latest/download/uv-installer.sh | sh
+          echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
+
+      - name: "Install project dependencies via uv"
+        run: |
+          uv --version
+          # install dev dependencies for CI (tests + linters)
+          uv sync --extra dev --no-interaction
+
+      - name: "Lint: ruff"
+        run: |
+          ruff check .
+
+      - name: "Run tests with coverage"
+        env:
+          PYTHONPATH: .
+        run: |
+          pytest --maxfail=1 --disable-warnings -q --cov=payouts --cov-report=xml --cov-report=term
+
+      - name: "Upload coverage XML artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml-${{ matrix.python-version }}
+          path: coverage.xml
+
+      - name: "Generate HTML coverage"
+        run: |
+          coverage html -d coverage_html || true
+
+      - name: "Upload coverage HTML"
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html-${{ matrix.python-version }}
+          path: coverage_html
