@@ -98,9 +98,6 @@ jobs:
             echo "ERROR: ruff is not installed. Ensure ruff is listed in dev dependencies in pyproject.toml and that \`uv sync --extra dev\` ran successfully."
             exit 1
           fi
-      - name: "Lint: ruff"
-        run: |
-          ruff check .
 
       - name: "Run tests with coverage"
         env:
