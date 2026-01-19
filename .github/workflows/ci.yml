@@ -79,24 +79,29 @@ jobs:
           # install dev dependencies for CI (tests + linters)
           uv sync --extra dev
 
-      - name: "Debug: show PATH and installed packages"
+      - name: "Add ~/.local/bin to PATH for runner"
+        run: echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
+
+      - name: "Ensure ruff is available (install fallback if missing)"
         run: |
-          echo "USER=$(whoami)"
-          echo "PATH=$PATH"
-          which ruff || true
-          python -m ruff --version 2>/dev/null || true
-          python -m pip show ruff 2>/dev/null || true
-          python -m pip list --disable-pip-version-check
+          echo "Check ruff"
+          if command -v ruff >/dev/null 2>&1; then
+            ruff --version
+          elif python -m ruff --version >/dev/null 2>&1; then
+            python -m ruff --version
+          else
+            echo "ruff not found — installing fallback via pip"
+            python -m pip install --upgrade ruff
+            echo "Installed ruff: $(python -m ruff --version || true)"
+          fi
 
       - name: "Lint: ruff"
         run: |
+          # запуск через модуль надёжнее, если бинарник не в PATH
           if command -v ruff >/dev/null 2>&1; then
             ruff check .
-          elif python -m ruff --version >/dev/null 2>&1; then
-            python -m ruff check .
           else
-            echo "ERROR: ruff is not installed. Ensure ruff is listed in dev dependencies in pyproject.toml and that \`uv sync --extra dev\` ran successfully."
-            exit 1
+            python -m ruff check .
           fi
 
       - name: "Run tests with coverage"
