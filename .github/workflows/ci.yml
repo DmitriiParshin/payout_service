@@ -77,7 +77,7 @@ jobs:
         run: |
           uv --version
           # install dev dependencies for CI (tests + linters)
-          uv sync --extra dev --no-interaction
+          uv sync --extra dev
 
       - name: "Lint: ruff"
         run: |
