@@ -82,27 +82,10 @@ jobs:
       - name: "Add ~/.local/bin to PATH for runner"
         run: echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
 
-      - name: "Ensure ruff is available (install fallback if missing)"
-        run: |
-          echo "Check ruff"
-          if command -v ruff >/dev/null 2>&1; then
-            ruff --version
-          elif python -m ruff --version >/dev/null 2>&1; then
-            python -m ruff --version
-          else
-            echo "ruff not found — installing fallback via pip"
-            python -m pip install --upgrade ruff
-            echo "Installed ruff: $(python -m ruff --version || true)"
-          fi
-
       - name: "Lint: ruff"
         run: |
-          # запуск через модуль надёжнее, если бинарник не в PATH
-          if command -v ruff >/dev/null 2>&1; then
-            ruff check .
-          else
-            python -m ruff check .
-          fi
+          # запускаем через модуль Python — не требуется ручная установка через pip в CI
+          python -m ruff check .
 
       - name: "Run tests with coverage"
         env:
