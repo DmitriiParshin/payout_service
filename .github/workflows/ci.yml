@@ -23,7 +23,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U postgres -d test_payout_db"
+          --health-cmd="pg_isready -h 127.0.0.1 -p 5432 -U test_payout_user -d test_payout_db"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=5
@@ -54,14 +54,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libpq-dev gcc curl
 
-      - name: "Wait for Postgres"
+      - name: Wait for Postgres
         run: |
           for i in {1..30}; do
-            pg_isready -h 127.0.0.1 -p 5432 -U postgres && break
+            pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" && break
             sleep 1
           done
+        env:
+          DB_HOST: ${{ env.DB_HOST }}
+          DB_PORT: ${{ env.DB_PORT }}
+          DB_USER: ${{ env.DB_USER }}
 
-      - name: "Cache pip downloads"
+      - name: Cache pip downloads
         uses: actions/cache@v4
         with:
           path: |
@@ -71,45 +75,26 @@ jobs:
             ${{ runner.os }}-pip-${{ matrix.python-version }}-
             ${{ runner.os }}-pip-
 
-      - name: "Install uv (using project installer like in Dockerfile)"
+      - name: Install uv
         run: |
           curl -LsSf https://github.com/astral-sh/uv/releases/latest/download/uv-installer.sh | sh
           echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
 
-      - name: "Install project dependencies via uv"
+      - name: Install project dependencies via uv
         run: |
           uv --version
-          # install dev dependencies for CI (tests + linters)
           uv sync --extra dev
+        env:
+          PATH: ${{ env.PATH }}
 
-      - name: "Add ~/.local/bin to PATH for runner"
-        run: echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
-
-      - name: "Lint: ruff"
+      - name: Run ruff linter
         run: |
-          # активируем виртуальное окружение, созданное uv
           . .venv/bin/activate
           python -m ruff check .
+        shell: bash
 
-      - name: "Run tests with coverage"
-        env:
-          PYTHONPATH: .
+      - name: Run tests via pytest
         run: |
           . .venv/bin/activate
-          python -m pytest --maxfail=1 --disable-warnings -q --cov=payouts --cov-report=xml --cov-report=term
-
-      - name: "Upload coverage XML artifact"
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-xml-${{ matrix.python-version }}
-          path: coverage.xml
-
-      - name: "Generate HTML coverage"
-        run: |
-          coverage html -d coverage_html || true
-
-      - name: "Upload coverage HTML"
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-html-${{ matrix.python-version }}
-          path: coverage_html
+          python -m pytest --maxfail=1 --disable-warnings -q
+        shell: bash

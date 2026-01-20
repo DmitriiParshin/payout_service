@@ -5,7 +5,7 @@ description = "Сервис управления заявками на выпл�
 requires-python = ">=3.12"
 
 dependencies = [
-    "Django==6.0",
+    "django==6.0",
     "djangorestframework==3.16.1",
     "celery==5.6.0",
     "redis==7.1.0",
