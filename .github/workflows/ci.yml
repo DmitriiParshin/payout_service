@@ -12,7 +12,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.12, 3.13, 3.14]
+        python-version: ["3.12", "3.13", "3.14"]
+
     services:
       postgres:
         image: postgres:15
@@ -23,78 +24,155 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -h 127.0.0.1 -p 5432 -U test_payout_user -d test_payout_db"
+          --health-cmd="pg_isready -U test_payout_user -d test_payout_db"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=5
 
     env:
+      # Django settings
       DJANGO_SETTINGS_MODULE: app.settings_tests
-      SECRET_KEY: test-secret-key-12345
+      SECRET_KEY: test-secret-key-12345-for-ci
       ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
+      DEBUG: "False"
 
+      # Database connection
       DB_NAME: test_payout_db
       DB_USER: test_payout_user
       DB_PASSWORD: test_payout_password
       DB_HOST: 127.0.0.1
       DB_PORT: 5432
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      # PostgreSQL connection string (для удобства)
+      DATABASE_URL: postgresql://test_payout_user:test_payout_password@127.0.0.1:5432/test_payout_db
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      # Python/UV оптимизации
+      PYTHONUNBUFFERED: "1"
+      UV_NO_CACHE: "false"
+
+    steps:
+      # 1. Получаем код
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Полный history для coverage отчетов
+
+      # 2. Устанавливаем uv и Python
+      - name: Setup uv with Python
+        uses: astral-sh/setup-uv@v3
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
+          # Автоматическое кэширование на основе uv.lock
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          # Оптимизация для CI
+          cache-http: true
+          cache-wheels: true
 
-      - name: "Install system deps"
+      # 3. Устанавливаем системные зависимости
+      - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libpq-dev gcc curl
+          sudo apt-get install -y \
+            libpq-dev \
+            build-essential \
+            curl \
+            git
+        shell: bash
 
-      - name: Wait for Postgres
+      # 4. Ожидаем готовности PostgreSQL
+      - name: Wait for PostgreSQL to be ready
         run: |
-          for i in {1..30}; do
-            pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" && break
+          timeout=30
+          counter=0
+          until pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" || [ $counter -eq $timeout ]; do
+            echo "Waiting for PostgreSQL... ($counter/$timeout)"
             sleep 1
+            ((counter++))
           done
-        env:
-          DB_HOST: ${{ env.DB_HOST }}
-          DB_PORT: ${{ env.DB_PORT }}
-          DB_USER: ${{ env.DB_USER }}
+          
+          if [ $counter -eq $timeout ]; then
+            echo "PostgreSQL not ready after $timeout seconds"
+            exit 1
+          fi
+          
+          echo "PostgreSQL is ready!"
+          
+          # Проверяем доступ к БД
+          PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1;" || echo "Database connection test failed"
+        shell: bash
 
-      - name: Cache pip downloads
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-${{ matrix.python-version }}-
-            ${{ runner.os }}-pip-
-
-      - name: Install uv
+      # 5. Устанавливаем зависимости проекта через uv
+      - name: Install Python dependencies
         run: |
-          curl -LsSf https://github.com/astral-sh/uv/releases/latest/download/uv-installer.sh | sh
-          echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
-
-      - name: Install project dependencies via uv
-        run: |
+          # Проверяем версии
           uv --version
-          uv sync --extra dev
-        env:
-          PATH: ${{ env.PATH }}
-
-      - name: Run ruff linter
-        run: |
-          . .venv/bin/activate
-          python -m ruff check .
+          python --version
+          
+          # Синхронизируем зависимости (используем frozen mode для consistency)
+          uv sync \
+            --extra dev \
+            --frozen \
+            --no-install-project \
+            --compile-bytecode
+          
+          # Устанавливаем проект в editable mode
+          uv pip install -e .
         shell: bash
 
-      - name: Run tests via pytest
+      # 6. Проверяем структуру проекта
+      - name: Verify project structure
         run: |
-          . .venv/bin/activate
-          python -m pytest --maxfail=1 --disable-warnings -q
+          echo "Project structure:"
+          ls -la
+          
+          echo "Virtual environment:"
+          uv venv --path
+          
+          echo "Installed packages:"
+          uv pip list
         shell: bash
+
+      # 7. Запускаем линтер (ruff)
+      - name: Run Ruff linter
+        run: uv run ruff check .
+        shell: bash
+
+      # 8. Проверяем форматирование
+      - name: Check code formatting
+        run: uv run ruff format --check .
+        shell: bash
+
+      # 9. Запускаем тесты с покрытием
+      - name: Run tests with pytest
+        run: |
+          uv run pytest \
+            --maxfail=1 \
+            --disable-warnings \
+            -v \
+            --cov=payouts \
+            --cov-report=xml \
+            --cov-report=term \
+            --cov-fail-under=80 \
+            --junitxml=junit.xml
+        shell: bash
+
+      # 10. Загружаем артефакты (coverage отчеты)
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: |
+            coverage.xml
+            junit.xml
+
+      # 11. Загружаем отчеты в Codecov
+      - name: Upload to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: unittests
+          name: python-${{ matrix.python-version }}
