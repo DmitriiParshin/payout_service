@@ -43,12 +43,8 @@ jobs:
       DB_HOST: 127.0.0.1
       DB_PORT: 5432
 
-      # PostgreSQL connection string (для удобства)
-      DATABASE_URL: postgresql://test_payout_user:test_payout_password@127.0.0.1:5432/test_payout_db
-
       # Python/UV оптимизации
       PYTHONUNBUFFERED: "1"
-      UV_NO_CACHE: "false"
 
     steps:
       # 1. Получаем код
@@ -62,10 +58,8 @@ jobs:
         uses: astral-sh/setup-uv@v3
         with:
           python-version: ${{ matrix.python-version }}
-          # Автоматическое кэширование на основе uv.lock
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-          # Оптимизация для CI
           cache-http: true
           cache-wheels: true
 
@@ -112,38 +106,23 @@ jobs:
           # Синхронизируем зависимости (используем frozen mode для consistency)
           uv sync \
             --extra dev \
-            --frozen \
-            --no-install-project \
-            --compile-bytecode
+            --frozen
           
-          # Устанавливаем проект в editable mode
-          uv pip install -e .
+          # Добавляем текущую директорию в PYTHONPATH
+          echo "PYTHONPATH=$(pwd):$PYTHONPATH" >> $GITHUB_ENV
         shell: bash
 
-      # 6. Проверяем структуру проекта
-      - name: Verify project structure
-        run: |
-          echo "Project structure:"
-          ls -la
-          
-          echo "Virtual environment:"
-          uv venv --path
-          
-          echo "Installed packages:"
-          uv pip list
-        shell: bash
-
-      # 7. Запускаем линтер (ruff)
+      # 6. Запускаем линтер (ruff)
       - name: Run Ruff linter
         run: uv run ruff check .
         shell: bash
 
-      # 8. Проверяем форматирование
+      # 7. Проверяем форматирование
       - name: Check code formatting
         run: uv run ruff format --check .
         shell: bash
 
-      # 9. Запускаем тесты с покрытием
+      # 8. Запускаем тесты с покрытием
       - name: Run tests with pytest
         run: |
           uv run pytest \
@@ -157,7 +136,7 @@ jobs:
             --junitxml=junit.xml
         shell: bash
 
-      # 10. Загружаем артефакты (coverage отчеты)
+      # 9. Загружаем артефакты (coverage отчеты)
       - name: Upload coverage reports
         if: always()
         uses: actions/upload-artifact@v4
