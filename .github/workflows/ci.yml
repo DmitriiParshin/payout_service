@@ -36,7 +36,7 @@ jobs:
       DB_NAME: test_payout_db
       DB_USER: test_payout_user
       DB_PASSWORD: test_payout_password
-      DB_HOST: postgres
+      DB_HOST: 127.0.0.1
       DB_PORT: 5432
 
     steps:
